@@ -36,6 +36,11 @@ red500 <- reduced
 new_points <- red500
 new_points_sf <- st_as_sf(new_points, coords = c("lng", "lat"), crs = 4326)
 all_points <- new_points_sf
+
+# Radii values
+inner_radius <- 1000  # m inner radius
+outer_radius <- 5000  # m outer radius
+
 # Define the UI
 ui <- fluidPage(
   tags$style(type = "text/css", "
@@ -91,22 +96,19 @@ ui <- fluidPage(
              class = "grid",
              style = "display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 20px;"
     ))  
-  )
+)
 
 #try(random_species <- sample(species_list, 5))
 
 
 # Define the server logic
 server <- function(input, output, session) {
-  
-  inner_radius <- 1000  # 1 km inner radius
-  outer_radius <- 5000  # 5 km outer radius
-  
+
   output$map <- renderLeaflet({
     leaflet() %>%
       addTiles() %>%
       setView(lng = 6.13, lat = 49.61, zoom = 12) #%>%
-      #addMarkers(data = all_points, popup = ~name)
+    #addMarkers(data = all_points, popup = ~name)
   })
   
   observeEvent(input$map_click, {
@@ -138,27 +140,27 @@ server <- function(input, output, session) {
     
     annulus_center <- st_as_sf(data.frame(lng = lng, lat = lat),
                                coords = c("lng", "lat"), crs = 4326)
+    
+    distances <- 
 
-    distances <- st_distance(annulus_center, all_points)
-    print(Sys.time() - pre)
     
-    within_outer_circle <- as.numeric(distances) <= outer_radius
-    outside_inner_circle <- as.numeric(distances) > inner_radius
-    print(Sys.time() - pre)
+    within_outer_circle <- st_is_within_distance(annulus_center, all_points, outer_radius)
     
+    outside_inner_circle <- st_is_within_distance(annulus_center, all_points, outer_radius)
+    print(Sys.time() - pre)
     
     points_in_annulus <- all_points[within_outer_circle & outside_inner_circle, ]
     print(Sys.time() - pre)
     print(class(points_in_annulus))
     species_count <- c(table(as.data.frame(points_in_annulus)$species)) #%>%
-       # group_by(species) %>%
-       # summarise(count = n(), .groups = 'drop') %>%
-       # arrange(desc(count))
-       # 
+    # group_by(species) %>%
+    # summarise(count = n(), .groups = 'drop') %>%
+    # arrange(desc(count))
+    # 
     print(Sys.time() - pre)
     
     output$speciesInfo <- renderUI({
-          if (nrow(species_count) == 0) {
+      if (nrow(species_count) == 0) {
         return(h4("No species within the outer but not inner circle."))
       } else {
         species_table <- tags$table(class = "species-table",
@@ -204,8 +206,8 @@ server <- function(input, output, session) {
     #   do.call(tagList, image_elements)
     # })
   }
-)
+  )
 }
-  
+
 # Run the app
 shinyApp(ui, server)
