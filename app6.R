@@ -140,7 +140,7 @@ server <- function(input, output, session) {
     
     annulus_center <- st_as_sf(data.frame(lng = lng, lat = lat),
                                coords = c("lng", "lat"), crs = 4326)
-    
+    # st_join or st_is_within_distance? which is faster?
     distances <- 
 
     
