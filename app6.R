@@ -19,23 +19,16 @@ library(jsonlite)
 ###### Non-package functions
 source("utils.R")
 
-# Testing with random observations
-#source("randomspecies.R")
-
 # Actual species
 source("mdata.R")
 
-# Put Lat after Long
 reduced <- reduced[, c(1,3,2,4)]
-# Change columns names
 colnames(reduced) <- c("name", "lng", "lat", "species")
-# Test with 500
-#reduced <- reduced[order(reduced$preferred),]
-red500 <- reduced
 
-new_points <- red500
-new_points_sf <- st_as_sf(new_points, coords = c("lng", "lat"), crs = 4326)
-all_points <- new_points_sf
+new_points <- reduced
+all_points <- st_as_sf(new_points, coords = c("lng", "lat"), crs = 4326)
+all_points <- st_transform(all_points, 2169)
+all_points_coords <- st_coordinates(all_points)
 
 # Radii values
 inner_radius <- 1000  # m inner radius
@@ -98,16 +91,23 @@ ui <- fluidPage(
     ))  
 )
 
-#try(random_species <- sample(species_list, 5))
+library(RANN)
 
+idx_points_in_circle <- function(points, center, radius) {
+  kd_tree <- RANN::nn2(points, query = center,
+                       k = nrow(points),
+                       treetype="kd",
+                       searchtype = "radius",
+                       radius = radius)
+  kd_tree$nn.idx[kd_tree$nn.idx > 0]  # Filter non-zero indices
+}
 
 # Define the server logic
 server <- function(input, output, session) {
-
   output$map <- renderLeaflet({
     leaflet() %>%
       addTiles() %>%
-      setView(lng = 6.13, lat = 49.61, zoom = 12) #%>%
+        setView(lng = 6.13, lat = 49.61, zoom = 12) #%>%
     #addMarkers(data = all_points, popup = ~name)
   })
   
@@ -115,8 +115,6 @@ server <- function(input, output, session) {
     click <- input$map_click
     lat <- click$lat
     lng <- click$lng
-    
-    pre <- Sys.time()
     
     leafletProxy("map") %>%
       clearShapes() %>%
@@ -132,35 +130,34 @@ server <- function(input, output, session) {
         fillOpacity = 0.2,
         layerId = "innerCircle"
       )
-    print(Sys.time() - pre)
     
     output$annulusInfo <- renderPrint({
       paste("Annulus centered at: Lat:", lat, "Lng:", lng)
     })
     
-    annulus_center <- st_as_sf(data.frame(lng = lng, lat = lat),
-                               coords = c("lng", "lat"), crs = 4326)
-    # st_join or st_is_within_distance? which is faster?
-    distances <- 
+    center <- st_as_sf(data.frame(lng = lng, lat = lat),
+                       coords = c("lng", "lat"), crs = 4326)
+    center <- st_transform(center, 2169)
 
+    pre <- Sys.time()
+
+    center_coords <- st_coordinates(center)
+
+    idx_outer <- idx_points_in_circle(all_points_coords, center_coords, outer_radius)
+    points_outer <- all_points[idx_outer,]
+    species_count_outer <- as.data.frame(table(points_outer$species))
+
+    idx_inner <- idx_points_in_circle(st_coordinates(points_outer), center_coords, inner_radius)
+    points_inner <- points_outer[idx_inner,]
+    species_count_inner <- as.data.frame(table(points_inner$species))
+
+    species_annulus <- setdiff(species_count_outer$Var1, species_count_inner$Var1)
     
-    within_outer_circle <- st_is_within_distance(annulus_center, all_points, outer_radius)
-    
-    outside_inner_circle <- st_is_within_distance(annulus_center, all_points, outer_radius)
-    print(Sys.time() - pre)
-    
-    points_in_annulus <- all_points[within_outer_circle & outside_inner_circle, ]
-    print(Sys.time() - pre)
-    print(class(points_in_annulus))
-    species_count <- c(table(as.data.frame(points_in_annulus)$species)) #%>%
-    # group_by(species) %>%
-    # summarise(count = n(), .groups = 'drop') %>%
-    # arrange(desc(count))
-    # 
-    print(Sys.time() - pre)
+    species_count_annulus <- species_count_outer[species_count_outer$Var1 %in% species_annulus,]
+    species_count_annulus <- species_count_annulus[order(species_count_annulus$Freq, decreasing = TRUE),]
     
     output$speciesInfo <- renderUI({
-      if (nrow(species_count) == 0) {
+      if (nrow(species_count_annulus) == 0) {
         return(h4("No species within the outer but not inner circle."))
       } else {
         species_table <- tags$table(class = "species-table",
@@ -171,10 +168,10 @@ server <- function(input, output, session) {
                                       )
                                     ),
                                     tags$tbody(
-                                      lapply(1:nrow(species_count), function(i) {
+                                      lapply(1:nrow(species_count_annulus), function(i) {
                                         tags$tr(
-                                          tags$td(species_count$species[i]),
-                                          tags$td(species_count$count[i])
+                                          tags$td(species_count_annulus$Var1[i]),
+                                          tags$td(species_count_annulus$Freq[i])
                                         )
                                       })
                                     )
@@ -182,6 +179,8 @@ server <- function(input, output, session) {
         return(species_table)
       }
     })
+
+    print(Sys.time() - pre)
     
     # random_species <- species_count$species#sample(unique(species_count$species),100)
     # # Render the image grid
@@ -210,4 +209,4 @@ server <- function(input, output, session) {
 }
 
 # Run the app
-shinyApp(ui, server)
+shinyApp(ui, server, options=list(port=8080))
