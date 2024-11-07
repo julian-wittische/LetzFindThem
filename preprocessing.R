@@ -47,5 +47,5 @@ new_points_sf <- st_as_sf(new_points, coords = c("lng", "lat"), crs = 4326)
 # Remove observations outside of Luxembourg
 lux_borders <- geoboundaries("Luxembourg", adm_lvl="adm0")
 lux_borders <- st_transform(lux_borders, crs="EPSG:4326")
-# all_points <- st_join(lux_borders, new_points_sf, join=st_intersects)
-# beepr::beep(8)
+all_points <- new_points_sf[st_within( new_points_sf, lux_borders, sparse=FALSE),]
+beepr::beep(8)
