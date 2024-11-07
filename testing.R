@@ -16,7 +16,6 @@ library(dplyr)
 library(httr)
 library(jsonlite)
 library(units)
-
 library(parallel)
 
 ###### Non-package functions
@@ -57,25 +56,22 @@ annu <- distances <= outer_radius & distances > inner_radius
 print(Sys.time() - pre)
 beepr::beep(10)
 
-# NEW APPROACH 1
-pre <- Sys.time()
-bounding_box <- st_buffer(annulus_center, outer_radius)
-pre_filtered_points <- all_points[st_intersects(all_points, bounding_box, sparse = FALSE), ]
-distances <- st_distance(annulus_center, pre_filtered_points)
-couronne <- distances <= outer_radius & distances > inner_radius
-print(Sys.time() - pre)
-beepr::beep(10)
-
-# NEW APPROACH 2
-pre <- Sys.time()
-pre_filtered_points <- st_join(annulus_center, all_points, join=st_is_within_distance, outer_radius)
-distances <- st_distance(annulus_center, pre_filtered_points)
-couronne <- distances <= outer_radius & distances > inner_radius
-print(Sys.time() - pre)
-beepr::beep(10)
-
-
-
+# # NEW APPROACH 1
+# pre <- Sys.time()
+# bounding_box <- st_buffer(annulus_center, outer_radius)
+# pre_filtered_points <- all_points[st_intersects(all_points, bounding_box, sparse = FALSE), ]
+# distances <- st_distance(annulus_center, pre_filtered_points)
+# couronne <- distances <= outer_radius & distances > inner_radius
+# print(Sys.time() - pre)
+# beepr::beep(10)
+# 
+# # NEW APPROACH 2
+# pre <- Sys.time()
+# pre_filtered_points <- st_join(annulus_center, all_points, join=st_is_within_distance, outer_radius)
+# distances <- st_distance(annulus_center, pre_filtered_points)
+# couronne <- distances <= outer_radius & distances > inner_radius
+# print(Sys.time() - pre)
+# beepr::beep(10)
 
 # SPATIAL INDEXING BULLSHIT
 pre <- Sys.time()

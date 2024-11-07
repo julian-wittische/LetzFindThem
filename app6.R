@@ -8,35 +8,6 @@
 # Script goal: utility functions to be used by app
 ################################################################################
 
-###### Libraries
-library(shiny)
-library(leaflet)
-library(sf)
-library(dplyr)
-library(httr)
-library(jsonlite)
-
-###### Non-package functions
-source("utils.R")
-
-# Testing with random observations
-#source("randomspecies.R")
-
-# Actual species
-source("mdata.R")
-
-# Put Lat after Long
-reduced <- reduced[, c(1,3,2,4)]
-# Change columns names
-colnames(reduced) <- c("name", "lng", "lat", "species")
-# Test with 500
-#reduced <- reduced[order(reduced$preferred),]
-red500 <- reduced
-
-new_points <- red500
-new_points_sf <- st_as_sf(new_points, coords = c("lng", "lat"), crs = 4326)
-all_points <- new_points_sf
-
 # Radii values
 inner_radius <- set_units(1000, "m")  # m inner radius
 outer_radius <- set_units(5000, "m")  # m outer radius
@@ -111,12 +82,15 @@ server <- function(input, output, session) {
     #addMarkers(data = all_points, popup = ~name)
   })
   
+  # CHECKPOINT START
+  pre <- Sys.time()
+  
   observeEvent(input$map_click, {
     click <- input$map_click
     lat <- click$lat
     lng <- click$lng
     
-    pre <- Sys.time()
+    print(paste("post click", Sys.time() - pre))
     
     leafletProxy("map") %>%
       clearShapes() %>%
@@ -138,7 +112,7 @@ server <- function(input, output, session) {
     })
     
     # CHECKPOINT
-    print(paste("post click", Sys.time() - pre))
+    print(paste("post map creation", Sys.time() - pre))
     
     annulus_center <- st_as_sf(data.frame(lng = lng, lat = lat),
                                coords = c("lng", "lat"), crs = 4326)
@@ -151,13 +125,10 @@ server <- function(input, output, session) {
     print(paste("post annulus points selection", Sys.time() - pre))
     
     species_count <- as.data.frame(table(as.data.frame(points_in_annulus)$species))
-    colnames(species_count) <- c("species", "count") #%>%
-    # group_by(species) %>%
-    # summarise(count = n(), .groups = 'drop') %>%
-    # arrange(desc(count))
-    # 
+    colnames(species_count) <- c("species", "count")
+    
     # CHECKPOINT
-    print(paste("post species table", Sys.time() - pre))
+    print(paste("post species table computation", Sys.time() - pre))
     
     output$speciesInfo <- renderUI({
       if (nrow(species_count) == 0) {
@@ -183,6 +154,9 @@ server <- function(input, output, session) {
       }
     })
     
+    # CHECKPOINT
+    print(paste("post species table rendering", Sys.time() - pre))
+    
     # random_species <- species_count$species#sample(unique(species_count$species),100)
     # # Render the image grid
     # output$imageGrid <- renderUI({
@@ -205,6 +179,9 @@ server <- function(input, output, session) {
     #   })
     #   do.call(tagList, image_elements)
     # })
+    
+    # # CHECKPOINT
+    # print(paste("post image rendering", Sys.time() - pre))
   }
   )
 }
