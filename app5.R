@@ -31,7 +31,7 @@ reduced <- reduced[, c(1,3,2,4)]
 colnames(reduced) <- c("name", "lng", "lat", "species")
 # Test with 500
 #reduced <- reduced[order(reduced$preferred),]
-red500 <- reduced
+red500 <- reduced[1:500,]
 
 new_points <- red500
 new_points_sf <- st_as_sf(new_points, coords = c("lng", "lat"), crs = 4326)
@@ -150,7 +150,8 @@ server <- function(input, output, session) {
     points_in_annulus <- all_points[within_outer_circle & outside_inner_circle, ]
     print(Sys.time() - pre)
     print(class(points_in_annulus))
-    species_count <- c(table(as.data.frame(points_in_annulus)$species)) #%>%
+    species_count <- as.data.frame(table(as.data.frame(points_in_annulus)$species))
+    colnames(species_count) <- c("species", "count")#%>%
        # group_by(species) %>%
        # summarise(count = n(), .groups = 'drop') %>%
        # arrange(desc(count))

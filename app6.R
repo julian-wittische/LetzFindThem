@@ -38,8 +38,8 @@ new_points_sf <- st_as_sf(new_points, coords = c("lng", "lat"), crs = 4326)
 all_points <- new_points_sf
 
 # Radii values
-inner_radius <- 1000  # m inner radius
-outer_radius <- 5000  # m outer radius
+inner_radius <- set_units(1000, "m")  # m inner radius
+outer_radius <- set_units(5000, "m")  # m outer radius
 
 # Define the UI
 ui <- fluidPage(
@@ -132,32 +132,32 @@ server <- function(input, output, session) {
         fillOpacity = 0.2,
         layerId = "innerCircle"
       )
-    print(Sys.time() - pre)
     
     output$annulusInfo <- renderPrint({
       paste("Annulus centered at: Lat:", lat, "Lng:", lng)
     })
     
+    # CHECKPOINT
+    print(paste("post click", Sys.time() - pre))
+    
     annulus_center <- st_as_sf(data.frame(lng = lng, lat = lat),
                                coords = c("lng", "lat"), crs = 4326)
-    # st_join or st_is_within_distance? which is faster?
-    distances <- 
-
     
-    within_outer_circle <- st_is_within_distance(annulus_center, all_points, outer_radius)
+    distances <- st_distance(annulus_center, all_points)
+    annu <- distances <= outer_radius & distances > inner_radius
+    points_in_annulus <- all_points[annu, ]
     
-    outside_inner_circle <- st_is_within_distance(annulus_center, all_points, outer_radius)
-    print(Sys.time() - pre)
+    # CHECKPOINT
+    print(paste("post annulus points selection", Sys.time() - pre))
     
-    points_in_annulus <- all_points[within_outer_circle & outside_inner_circle, ]
-    print(Sys.time() - pre)
-    print(class(points_in_annulus))
-    species_count <- c(table(as.data.frame(points_in_annulus)$species)) #%>%
+    species_count <- as.data.frame(table(as.data.frame(points_in_annulus)$species))
+    colnames(species_count) <- c("species", "count") #%>%
     # group_by(species) %>%
     # summarise(count = n(), .groups = 'drop') %>%
     # arrange(desc(count))
     # 
-    print(Sys.time() - pre)
+    # CHECKPOINT
+    print(paste("post species table", Sys.time() - pre))
     
     output$speciesInfo <- renderUI({
       if (nrow(species_count) == 0) {
