@@ -1,5 +1,6 @@
-mdata <- read.csv("observations.csv", encoding="latin1")
+mdata <- read.csv("data/observations-short.csv", encoding="latin1")
 
+mdata <- mdata[complete.cases(mdata$preferred),]
 mdata <- mdata[complete.cases(mdata$Lat),]
 mdata <- mdata[complete.cases(mdata$Long),]
 

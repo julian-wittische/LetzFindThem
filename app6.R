@@ -10,16 +10,15 @@
 
 ###### Libraries
 library(shiny)
+library(bslib)
 library(leaflet)
 library(sf)
 library(dplyr)
-library(httr)
-library(jsonlite)
 
 ###### Non-package functions
 source("utils.R")
 
-# Actual species
+# Load observation data
 source("mdata.R")
 
 reduced <- reduced[, c(1,3,2,4)]
@@ -38,7 +37,7 @@ inner_radius <- 1000  # m inner radius
 outer_radius <- 5000  # m outer radius
 
 # Define the UI
-ui <- fluidPage(
+ui <- page_fluid(
   tags$style(type = "text/css", "
     #map {
       height: 50vh; 
@@ -67,41 +66,15 @@ ui <- fluidPage(
       height: auto;
     }
   "),
-  
   div(
     leafletOutput("map", width = "100%", height = "50vh"),
     style = "height: 50vh;"
   ),
-  
-  #   div(
-  #     style = "height: 50vh; padding: 20px;",
-  #     h3("Annulus Information"),
-  #     verbatimTextOutput("annulusInfo"),
-  #     uiOutput("speciesInfo"),
-  #     div(id = "imageGrid", class = "grid")  # Container for the image grid
-  #   )
-  # )
-  # Information and Images
   div(
     style = "padding: 20px;",
-    h3("Annulus Information"),
-    verbatimTextOutput("annulusInfo"),
     uiOutput("speciesInfo"),
-    titlePanel("Random Species Images"),
-    uiOutput("imageGrid",
-             class = "grid",
-             style = "display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 20px;"
-    ))  
+  )
 )
-
-idx_points_in_circle <- function(points, center, radius) {
-  kd_tree <- RANN::nn2(points, query = center,
-                       k = nrow(points),
-                       treetype="kd",
-                       searchtype = "radius",
-                       radius = radius)
-  kd_tree$nn.idx[kd_tree$nn.idx > 0]  # Filter non-zero indices
-}
 
 lv_points_in_circle <- function(tree, center, radius) {
   unlist(withinDistance(tree, center, radius)[1])
@@ -109,13 +82,6 @@ lv_points_in_circle <- function(tree, center, radius) {
 
 # Define the server logic
 server <- function(input, output, session) {
-  output$map <- renderLeaflet({
-    leaflet() %>%
-      addTiles() %>%
-        setView(lng = 6.13, lat = 49.61, zoom = 12) #%>%
-    #addMarkers(data = all_points, popup = ~name)
-  })
-  
   observeEvent(input$map_click, {
     pre <- Sys.time()
 
@@ -138,9 +104,9 @@ server <- function(input, output, session) {
         layerId = "innerCircle"
       )
     
-    output$annulusInfo <- renderPrint({
-      paste("Annulus centered at: Lat:", lat, "Lng:", lng)
-    })
+    ## output$annulusInfo <- renderPrint({
+    ##   paste("Annulus centered at: Lat:", lat, "Lng:", lng)
+    ## })
     
     center <- st_as_sf(data.frame(lng = lng, lat = lat),
                        coords = c("lng", "lat"), crs = 4326)
@@ -165,53 +131,47 @@ server <- function(input, output, session) {
       if (nrow(species_count_annulus) == 0) {
         return(h4("No species within the outer but not inner circle."))
       } else {
-        species_table <- tags$table(class = "species-table",
-                                    tags$thead(
-                                      tags$tr(
-                                        tags$th("Species"),
-                                        tags$th("Count")
-                                      )
-                                    ),
-                                    tags$tbody(
-                                      lapply(1:nrow(species_count_annulus), function(i) {
-                                        tags$tr(
-                                          tags$td(species_count_annulus$Var1[i]),
-                                          tags$td(species_count_annulus$Freq[i])
-                                        )
-                                      })
-                                    )
-        )
-        return(species_table)
+        ## species_table <- tags$table(class = "species-table",
+        ##                             tags$thead(
+        ##                               tags$tr(
+        ##                                 tags$th("Species"),
+        ##                                 tags$th("Count")
+        ##                               )
+        ##                             ),
+        ##                             tags$tbody(
+        ##                               lapply(1:nrow(species_count_annulus), function(i) {
+        ##                                 tags$tr(
+        ##                                   tags$td(species_count_annulus$Var1[i]),
+        ##                                   tags$td(species_count_annulus$Freq[i])
+        ##                                 )
+        ##                               })
+        ##                             )
+        ## )
+          ## return(species_table)
+          layout_column_wrap(
+              width="200px", fixed_width=TRUE,
+              !!!lapply(1:nrow(species_count_annulus), function(i) {
+                  card(
+                      card_header(species_count_annulus$Var1[i]),
+                      card_body(
+                          paste("Count in donut", species_count_annulus$Freq[i])
+                      )
+                  )
+              })
+          )
       }
     })
 
     print(Sys.time() - pre)
-    
-    # random_species <- species_count$species#sample(unique(species_count$species),100)
-    # # Render the image grid
-    # output$imageGrid <- renderUI({
-    #   # Fetch images for random species
-    #   images <- lapply(random_species, function(species) {
-    #     image_urls <- get_images(species)
-    #     if (!is.null(image_urls)) {
-    #       return(image_urls)
-    #     } else {
-    #       return(NULL)
-    #     }
-    #   })
-    #   
-    #   image_elements <- lapply(images, function(image_url) {
-    #     if (!is.null(image_url)) {
-    #       tags$img(src = image_url[1], alt = "Species image", style = "width: 100%; height: auto;")  # Display the first image
-    #     } else {
-    #       NULL
-    #     }
-    #   })
-    #   do.call(tagList, image_elements)
-    # })
-  }
-  )
+  })
+
+  output$map <- renderLeaflet({
+      leaflet() %>%
+          addTiles() %>%
+          setView(lng = 6.13, lat = 49.61, zoom = 12) #%>%
+          #addMarkers(data = all_points, popup = ~name)
+  })
 }
 
 # Run the app
-shinyApp(ui, server, options=list(port=8080))
+shinyApp(ui, server, options=list(port=8080, shiny.autoreload=TRUE))
