@@ -30,6 +30,9 @@ all_points <- st_as_sf(new_points, coords = c("lng", "lat"), crs = 4326)
 all_points <- st_transform(all_points, 2169)
 all_points_coords <- st_coordinates(all_points)
 
+library(rtree)
+tree <- RTree(all_points_coords)
+
 # Radii values
 inner_radius <- 1000  # m inner radius
 outer_radius <- 5000  # m outer radius
@@ -91,8 +94,6 @@ ui <- fluidPage(
     ))  
 )
 
-library(RANN)
-
 idx_points_in_circle <- function(points, center, radius) {
   kd_tree <- RANN::nn2(points, query = center,
                        k = nrow(points),
@@ -100,6 +101,10 @@ idx_points_in_circle <- function(points, center, radius) {
                        searchtype = "radius",
                        radius = radius)
   kd_tree$nn.idx[kd_tree$nn.idx > 0]  # Filter non-zero indices
+}
+
+lv_points_in_circle <- function(tree, center, radius) {
+  unlist(withinDistance(tree, center, radius)[1])
 }
 
 # Define the server logic
@@ -112,6 +117,8 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$map_click, {
+    pre <- Sys.time()
+
     click <- input$map_click
     lat <- click$lat
     lng <- click$lng
@@ -139,16 +146,14 @@ server <- function(input, output, session) {
                        coords = c("lng", "lat"), crs = 4326)
     center <- st_transform(center, 2169)
 
-    pre <- Sys.time()
-
     center_coords <- st_coordinates(center)
 
-    idx_outer <- idx_points_in_circle(all_points_coords, center_coords, outer_radius)
+    idx_outer <- lv_points_in_circle(tree, center_coords, outer_radius)
     points_outer <- all_points[idx_outer,]
     species_count_outer <- as.data.frame(table(points_outer$species))
 
-    idx_inner <- idx_points_in_circle(st_coordinates(points_outer), center_coords, inner_radius)
-    points_inner <- points_outer[idx_inner,]
+    idx_inner <- lv_points_in_circle(tree, center_coords, inner_radius)
+    points_inner <- all_points[idx_inner,]
     species_count_inner <- as.data.frame(table(points_inner$species))
 
     species_annulus <- setdiff(species_count_outer$Var1, species_count_inner$Var1)
