@@ -14,6 +14,7 @@ library(bslib)
 library(leaflet)
 library(sf)
 library(dplyr)
+library(digest)
 
 ###### Non-package functions
 source("utils.R")
@@ -33,39 +34,30 @@ library(rtree)
 tree <- RTree(all_points_coords)
 
 # Radii values
-inner_radius <- 1000  # m inner radius
-outer_radius <- 5000  # m outer radius
+inner_radius <- 700  # m inner radius
+outer_radius <- 4000  # m outer radius
+
+source("taxon_info.R")
+
+# Get taxon_info from disk. These need to be pre-fetched first
+taxon_info <- load_taxon_info_from_file()
 
 # Define the UI
 ui <- page_fluid(
-  tags$style(type = "text/css", "
-    #map {
-      height: 50vh; 
-      width: 100%;
-    }
-    .species-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .species-table th, .species-table td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: center;
-    }
-    .species-table th {
-      background-color: #f2f2f2;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 10px;
-      margin-top: 20px;
-    }
-    .grid img {
-      width: 100%;
-      height: auto;
-    }
-  "),
+    tags$style(type = "text/css", '
+#map {
+  height: 40vh; 
+  width: 100%;
+}
+
+dt:before {
+  content: "";
+  display: block;
+}
+dt, dd {
+  display: inline;
+}
+'),
   div(
     leafletOutput("map", width = "100%", height = "50vh"),
     style = "height: 50vh;"
@@ -78,6 +70,19 @@ ui <- page_fluid(
 
 lv_points_in_circle <- function(tree, center, radius) {
   unlist(withinDistance(tree, center, radius)[1])
+}
+
+thumb <- function(url) {
+    filename <- URLdecode(tail(strsplit(url, split="/")[[1]], n=1))
+    filename <- gsub(" ", "_", filename)
+    md5 <- digest(filename, algo="md5", serialize=FALSE)
+    src <- paste("https://upload.wikimedia.org/wikipedia/commons/thumb/",
+                 substr(md5, 1, 1), "/",
+                 substr(md5, 1, 2), "/",
+                 filename, "/",
+                 "200px-", filename,
+                 sep="")
+    url
 }
 
 # Define the server logic
@@ -104,10 +109,6 @@ server <- function(input, output, session) {
         layerId = "innerCircle"
       )
     
-    ## output$annulusInfo <- renderPrint({
-    ##   paste("Annulus centered at: Lat:", lat, "Lng:", lng)
-    ## })
-    
     center <- st_as_sf(data.frame(lng = lng, lat = lat),
                        coords = c("lng", "lat"), crs = 4326)
     center <- st_transform(center, 2169)
@@ -126,43 +127,47 @@ server <- function(input, output, session) {
     
     species_count_annulus <- species_count_outer[species_count_outer$Var1 %in% species_annulus,]
     species_count_annulus <- species_count_annulus[order(species_count_annulus$Freq, decreasing = TRUE),]
-    
+
     output$speciesInfo <- renderUI({
       if (nrow(species_count_annulus) == 0) {
         return(h4("No species within the outer but not inner circle."))
       } else {
-        ## species_table <- tags$table(class = "species-table",
-        ##                             tags$thead(
-        ##                               tags$tr(
-        ##                                 tags$th("Species"),
-        ##                                 tags$th("Count")
-        ##                               )
-        ##                             ),
-        ##                             tags$tbody(
-        ##                               lapply(1:nrow(species_count_annulus), function(i) {
-        ##                                 tags$tr(
-        ##                                   tags$td(species_count_annulus$Var1[i]),
-        ##                                   tags$td(species_count_annulus$Freq[i])
-        ##                                 )
-        ##                               })
-        ##                             )
-        ## )
-          ## return(species_table)
-          layout_column_wrap(
+        layout_column_wrap(
               width="200px", fixed_width=TRUE,
               !!!lapply(1:nrow(species_count_annulus), function(i) {
+                  taxon_name <- species_count_annulus$Var1[i]
+                  taxon_count <- species_count_annulus$Freq[i]
+                  src <- "https://placehold.co/200x200"
+                  wikipediaUrl <- paste("https://en.wikipedia.org/w/index.php?fulltext=1&search=", taxon_name, "&title=Special%3ASearch&ns0=1", sep="")
+                  ti <- find_taxon_info(taxon_info, taxon_name)[1,]
+
+                  if (nrow(ti) > 0 && !is.na(ti$image)) {
+                      src <- thumb(ti$image)
+                  }
+
+                  if (!is.na(ti$wikipediaLink)) {
+                      wikipediaUrl <- ti$wikipediaLink
+                  }
+
                   card(
-                      card_header(species_count_annulus$Var1[i]),
+                      card_header(tags$a(href=wikipediaUrl,
+                                         target="_blank",
+                                         taxon_name)),
                       card_body(
-                          paste("Count in donut", species_count_annulus$Freq[i])
+                          tags$img(src=src),
+                          tags$dl(
+                                   tags$dt("English: "), tags$dd(ti$commonNameEn),
+                                   tags$dt("Français: "), tags$dd(ti$commonNameFr),
+                                   tags$dt("Deutsch: "), tags$dd(ti$commonNameDe),
+                                   tags$dt("Lëtzebuergesch: "), tags$dd(ti$commonNameLb),
+                                   tags$dt("Count in donut"), tags$dd(taxon_count),
+                               )
                       )
                   )
               })
           )
       }
     })
-
-    print(Sys.time() - pre)
   })
 
   output$map <- renderLeaflet({

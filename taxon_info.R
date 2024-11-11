@@ -109,13 +109,18 @@ download_taxon_info_from_observations <- function(observations, block_size, save
   taxon_info <- download_taxon_info(taxa, block_size)
 
   if (save) {
-    save(taxon_info, "data/taxon_info.RData")
+    save(taxon_info, file="data/taxon_info.RData")
   }
   taxon_info
 }
 
 load_taxon_info_from_file <- function(path) {
-  load("data/taxon_info.RData")
+  if (missing(path)) {
+    path <- "data/taxon_info.RData"
+  }
+    
+  load(path)
+  taxon_info
 }
 
 find_taxon_info <- function(taxon_info, taxon_name) {
