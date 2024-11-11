@@ -3,16 +3,17 @@ library("purrr")
 
 query_template <- '
 SELECT 
-  ?species ?speciesLabel 
-  (SAMPLE(?image) AS ?image) 
+  (SAMPLE(?species) AS ?speciesUrl)
+  ?speciesLabel 
+  (SAMPLE(?image) AS ?imageUrl) 
   (SAMPLE(?commonNameEn) AS ?commonNameEn) 
   (SAMPLE(?commonNameDe) AS ?commonNameDe) 
   (SAMPLE(?commonNameFr) AS ?commonNameFr) 
   (SAMPLE(?commonNameLb) AS ?commonNameLb) 
-  (SAMPLE(?germanLabel) AS ?germanLabel) 
-  (SAMPLE(?frenchLabel) AS ?frenchLabel) 
-  (SAMPLE(?luxembourgishLabel) AS ?luxembourgishLabel) 
-  (SAMPLE(?wikipediaLink) AS ?wikipediaLink)
+  (SAMPLE(?germanLabel) AS ?labelDe) 
+  (SAMPLE(?frenchLabel) AS ?labelFr) 
+  (SAMPLE(?luxembourgishLabel) AS ?labelLb) 
+  (SAMPLE(?wikipediaLink) AS ?wikipediaUrl)
 WHERE {
   VALUES ?scientificName {%s}  # Scientific names
 
