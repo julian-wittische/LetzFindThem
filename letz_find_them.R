@@ -15,29 +15,19 @@ library(leaflet)
 library(sf)
 library(dplyr)
 library(digest)
-
-###### Non-package functions
-source("utils.R")
-
-# Load observation data
-source("mdata.R")
-
-reduced <- reduced[, c(1,3,2,4)]
-colnames(reduced) <- c("name", "lng", "lat", "species")
-
-new_points <- reduced
-all_points <- st_as_sf(new_points, coords = c("lng", "lat"), crs = 4326)
-all_points <- st_transform(all_points, 2169)
-all_points_coords <- st_coordinates(all_points)
-
 library(rtree)
-tree <- RTree(all_points_coords)
-
-# Radii values
-inner_radius <- 700  # m inner radius
-outer_radius <- 4000  # m outer radius
 
 source("taxon_info.R")
+source("mdata.R")
+
+all_points <- load_data("data/observations.csv")
+
+# Build search tree
+tree <- RTree(st_coordinates(all_points))
+
+# Radii values
+inner_radius <- 600  # m inner radius
+outer_radius <- 100  # m outer radius
 
 # Get taxon_info from disk. These need to be pre-fetched first
 taxon_info <- load_taxon_info_from_file()
@@ -134,19 +124,19 @@ server <- function(input, output, session) {
       } else {
         layout_column_wrap(
               width="200px", fixed_width=TRUE,
-              !!!lapply(1:nrow(species_count_annulus), function(i) {
+              !!!lapply(seq_len(nrow(species_count_annulus)), function(i) {
                   taxon_name <- species_count_annulus$Var1[i]
                   taxon_count <- species_count_annulus$Freq[i]
                   src <- "https://placehold.co/200x200"
                   wikipediaUrl <- paste("https://en.wikipedia.org/w/index.php?fulltext=1&search=", taxon_name, "&title=Special%3ASearch&ns0=1", sep="")
                   ti <- find_taxon_info(taxon_info, taxon_name)[1,]
 
-                  if (nrow(ti) > 0 && !is.na(ti$image)) {
-                      src <- thumb(ti$image)
+                  if (nrow(ti) > 0 && !is.na(ti$imageUrl)) {
+                      src <- thumb(ti$imageUrl)
                   }
 
-                  if (!is.na(ti$wikipediaLink)) {
-                      wikipediaUrl <- ti$wikipediaLink
+                  if (!is.na(ti$wikipediaUrl)) {
+                      wikipediaUrl <- ti$wikipediaUrl
                   }
 
                   card(
