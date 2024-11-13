@@ -150,6 +150,8 @@ download_taxon_info_from_observations <- function(observations, block_size, save
 
   observations <- as.data.frame(observations)
   obs_table <- as.data.table(observations)
+  ## setkey(obs_table, "preferred")
+  setindex(obs_table, "preferred")
 
   taxa <- sort(unique(observations$preferred))
   taxon_info <- download_taxon_info(taxa, block_size)
@@ -158,13 +160,14 @@ download_taxon_info_from_observations <- function(observations, block_size, save
   for (i in seq_len(nrow(taxon_info))) {
     print(paste(i/nrow(taxon_info)*100, "%"))
     sn <- taxon_info[i, "scientificName"][[1]]
-    obs <- observations[grep(sn, obs_table$preferred),] # find corresponding observations
+
+    obs <- obs_table[obs_table$preferred==sn,] # find corresponding observations
 
     taxon_info[i, "kingdom"] <- obs$Taxon_Kingdom[1]
     taxon_info[i, "phylum"] <- obs$Taxon_Phylum[1]
     taxon_info[i, "class"] <- obs$Taxon_Class[1]
     taxon_info[i, "order"] <- obs$Taxon_Order[1]
-    taxon_info[i, "family"] <- obs$Taxon_Family[1]    
+    taxon_info[i, "family"] <- obs$Taxon_Family[1]
   }
 
   if (save) {
