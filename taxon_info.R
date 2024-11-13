@@ -1,5 +1,6 @@
 library("WikidataQueryServiceR")
 library("purrr")
+library("data.table")
 
 query_template <- '
 SELECT
@@ -114,19 +115,19 @@ download_taxon_info <- function(taxon_names, block_size) {
     query <- sprintf(query_template, taxon_names_block_str)
     result <- query_wikidata(query)
 
-    # Use label as common name if first is missing
-    for (i in 1:nrow(result)) {
-      if (is.na(result[i, "commonNameEn"]) && !is.na(result[i, "labelEn"])) {
-        result[i, "commonNameEn"] = result[i, "labelEn"]
+    for (j in seq_len(nrow(result))) {
+      # Use label as common name if first is missing
+      if (is.na(result[j, "commonNameEn"]) && !is.na(result[j, "labelEn"])) {
+        result[j, "commonNameEn"] <- result[j, "labelEn"]
       }
-      if (is.na(result[i, "commonNameFr"]) && !is.na(result[i, "labelFr"])) {
-        result[i, "commonNameFr"] = result[i, "labelFr"]
+      if (is.na(result[j, "commonNameFr"]) && !is.na(result[j, "labelFr"])) {
+        result[j, "commonNameFr"] <- result[j, "labelFr"]
       }
-      if (is.na(result[i, "commonNameDe"]) && !is.na(result[i, "labelDe"])) {
-        result[i, "commonNameDe"] = result[i, "labelDe"]
+      if (is.na(result[j, "commonNameDe"]) && !is.na(result[j, "labelDe"])) {
+        result[j, "commonNameDe"] <- result[j, "labelDe"]
       }
-      if (is.na(result[i, "commonNameLb"]) && !is.na(result[i, "labelLb"])) {
-        result[i, "commonNameLb"] = result[i, "labelLb"]
+      if (is.na(result[j, "commonNameLb"]) && !is.na(result[j, "labelLb"])) {
+        result[j, "commonNameLb"] <- result[j, "labelLb"]
       }
     }
 
@@ -134,8 +135,10 @@ download_taxon_info <- function(taxon_names, block_size) {
 
     # append to taxon info
     taxon_info <- rbind(taxon_info, result)
-    
+
     i <- i+block_size
+
+    print(paste(i/names_count*100, "%"))
   }
   taxon_info
 }
@@ -144,9 +147,25 @@ download_taxon_info_from_observations <- function(observations, block_size, save
   if (missing(save)) {
     save <- false
   }
-    
-  taxa <- sort(unique(as.data.frame(observations)$species))
+
+  observations <- as.data.frame(observations)
+  obs_table <- as.data.table(observations)
+
+  taxa <- sort(unique(observations$species))
   taxon_info <- download_taxon_info(taxa, block_size)
+
+  # Supplement with higher taxon info from observation table
+  for (i in seq_len(nrow(taxon_info))) {
+    print(paste(i/nrow(taxon_info)*100, "%"))
+    sn <- taxon_info[i, "scientificName"][[1]]
+    obs <- observations[grep(sn, obs_table$species),] # find corresponding observations
+
+    taxon_info[i, "kingdom"] <- obs$Taxon_Kingdom[1]
+    taxon_info[i, "phylum"] <- obs$Taxon_Phylum[1]
+    taxon_info[i, "class"] <- obs$Taxon_Class[1]
+    taxon_info[i, "order"] <- obs$Taxon_Order[1]
+    taxon_info[i, "family"] <- obs$Taxon_Family[1]    
+  }
 
   if (save) {
     save(taxon_info, file="data/taxon_info.RData")

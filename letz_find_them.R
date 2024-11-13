@@ -17,17 +17,14 @@ library(dplyr)
 library(digest)
 library(rtree)
 
+source("config.R")
 source("taxon_info.R")
 source("mdata.R")
 
-all_points <- load_data("data/observations.csv")
+all_points <- load_data(DATA_PATH)
 
 # Build search tree
 tree <- RTree(st_coordinates(all_points))
-
-# Radii values
-inner_radius <- 600  # m inner radius
-outer_radius <- 100  # m outer radius
 
 # Get taxon_info from disk. These need to be pre-fetched first
 taxon_info <- load_taxon_info_from_file()
@@ -72,7 +69,7 @@ thumb <- function(url) {
                  filename, "/",
                  "200px-", filename,
                  sep="")
-    url
+    src
 }
 
 # Define the server logic
@@ -87,12 +84,12 @@ server <- function(input, output, session) {
     leafletProxy("map") %>%
       clearShapes() %>%
       addCircles(
-        lng = lng, lat = lat, radius = outer_radius,
+        lng = lng, lat = lat, radius = OUTER_RADIUS,
         color = "blue", fillColor = "blue", fillOpacity = 0,
         layerId = "outerCircle"
       ) %>%
       addCircles(
-        lng = lng, lat = lat, radius = inner_radius,
+        lng = lng, lat = lat, radius = INNER_RADIUS,
         color = "blue",
         fillColor = "blue",
         fillOpacity = 0.2,
@@ -105,11 +102,11 @@ server <- function(input, output, session) {
 
     center_coords <- st_coordinates(center)
 
-    idx_outer <- lv_points_in_circle(tree, center_coords, outer_radius)
+    idx_outer <- lv_points_in_circle(tree, center_coords, OUTER_RADIUS)
     points_outer <- all_points[idx_outer,]
     species_count_outer <- as.data.frame(table(points_outer$species))
 
-    idx_inner <- lv_points_in_circle(tree, center_coords, inner_radius)
+    idx_inner <- lv_points_in_circle(tree, center_coords, INNER_RADIUS)
     points_inner <- all_points[idx_inner,]
     species_count_inner <- as.data.frame(table(points_inner$species))
 
@@ -127,8 +124,8 @@ server <- function(input, output, session) {
               !!!lapply(seq_len(nrow(species_count_annulus)), function(i) {
                   taxon_name <- species_count_annulus$Var1[i]
                   taxon_count <- species_count_annulus$Freq[i]
-                  src <- "https://placehold.co/200x200"
-                  ## wikipediaUrl <- paste("https://en.wikipedia.org/w/index.php?fulltext=1&search=", taxon_name, "&title=Special%3ASearch&ns0=1", sep="")
+                  src <- "no-image.png"
+
                   ti <- find_taxon_info(taxon_info, taxon_name)[1,]
 
                   if (nrow(ti) > 0 && !is.na(ti$imageUrl)) {
@@ -173,6 +170,11 @@ server <- function(input, output, session) {
                                    tags$dt("Deutsch: "), tagDe,
                                    tags$dt("Lëtzebuergesch: "), tagLb,
                                    tags$dt("Count in donut"), tags$dd(taxon_count),
+                                   tags$dt("Higher taxonomy"),
+                                   tags$div(class="small",
+                                                  ti$class, ">",
+                                                  ti$order, ">",
+                                                  ti$family)
                                )
                       )
                   )
@@ -190,5 +192,6 @@ server <- function(input, output, session) {
   })
 }
 
+options(shiny.autoreload=TRUE)
 # Run the app
-shinyApp(ui, server, options=list(port=8080, shiny.autoreload=TRUE))
+shinyApp(ui, server, options=list(port=8080))
