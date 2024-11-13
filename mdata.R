@@ -1,6 +1,7 @@
 load_data <- function(path) {
-    mdata <- read.csv(path, encoding="latin1")
-
+    source("config.R")
+    (files <- list.files(DATAPATH, full.names = TRUE, pattern="*.csv"))
+    mdata <- do.call(rbind, lapply(files, function(x) read.csv(x, encoding="latin1")))
     mdata <- mdata[complete.cases(mdata$preferred),]
     mdata <- mdata[complete.cases(mdata$Lat),]
     mdata <- mdata[complete.cases(mdata$Long),]
@@ -15,3 +16,6 @@ load_data <- function(path) {
     all_points <- st_transform(all_points, 2169)
     all_points
 }
+################################################################################
+################################################################################
+###### 
