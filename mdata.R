@@ -1,8 +1,5 @@
-library(sf)
-source("config.R")
-
 load_data <- function(path) {
-    files <- list.files(DATA_PATH, full.names = TRUE, pattern="*.csv")
+    files <- list.files(path, full.names = TRUE, pattern="*.csv")
 
     mdata <- do.call(rbind, lapply(files, function(x) read.csv(x, encoding="latin1")))
 
