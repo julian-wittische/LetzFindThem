@@ -128,28 +128,50 @@ server <- function(input, output, session) {
                   taxon_name <- species_count_annulus$Var1[i]
                   taxon_count <- species_count_annulus$Freq[i]
                   src <- "https://placehold.co/200x200"
-                  wikipediaUrl <- paste("https://en.wikipedia.org/w/index.php?fulltext=1&search=", taxon_name, "&title=Special%3ASearch&ns0=1", sep="")
+                  ## wikipediaUrl <- paste("https://en.wikipedia.org/w/index.php?fulltext=1&search=", taxon_name, "&title=Special%3ASearch&ns0=1", sep="")
                   ti <- find_taxon_info(taxon_info, taxon_name)[1,]
 
                   if (nrow(ti) > 0 && !is.na(ti$imageUrl)) {
                       src <- thumb(ti$imageUrl)
                   }
 
-                  if (!is.na(ti$wikipediaUrl)) {
-                      wikipediaUrl <- ti$wikipediaUrl
+                  if (!is.na(ti$wikipediaLinkEn)) {
+                      tagEn <- tags$dd(tags$a(href=ti$wikipediaLinkEn,
+                                              target="_blank", ti$commonNameEn))
+                  } else {
+                      tagEn <- tags$dd(ti$commonNameEn)
+                  }
+
+                  if (!is.na(ti$wikipediaLinkFr)) {
+                      tagFr <- tags$dd(tags$a(href=ti$wikipediaLinkFr,
+                                              target="_blank", ti$commonNameFr))
+                  } else {
+                      tagFr <- tags$dd(ti$commonNameFr)
+                  }
+
+                  if (!is.na(ti$wikipediaLinkDe)) {
+                      tagDe <- tags$dd(tags$a(href=ti$wikipediaLinkDe,
+                                              target="_blank", ti$commonNameDe))
+                  } else {
+                      tagDe <- tags$dd(ti$commonNameDe)
+                  }
+
+                  if (!is.na(ti$wikipediaLinkLb)) {
+                      tagLb <- tags$dd(tags$a(href=ti$wikipediaLinkLb,
+                                              target="_blank", ti$commonNameLb))
+                  } else {
+                      tagLb <- tags$dd(ti$commonNameLb)
                   }
 
                   card(
-                      card_header(tags$a(href=wikipediaUrl,
-                                         target="_blank",
-                                         taxon_name)),
+                      card_header(taxon_name),
                       card_body(
                           tags$img(src=src),
                           tags$dl(
-                                   tags$dt("English: "), tags$dd(ti$commonNameEn),
-                                   tags$dt("Français: "), tags$dd(ti$commonNameFr),
-                                   tags$dt("Deutsch: "), tags$dd(ti$commonNameDe),
-                                   tags$dt("Lëtzebuergesch: "), tags$dd(ti$commonNameLb),
+                                   tags$dt("English: "), tagEn,
+                                   tags$dt("Français: "), tagFr,
+                                   tags$dt("Deutsch: "), tagDe,
+                                   tags$dt("Lëtzebuergesch: "), tagLb,
                                    tags$dt("Count in donut"), tags$dd(taxon_count),
                                )
                       )

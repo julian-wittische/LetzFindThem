@@ -2,18 +2,23 @@ library("WikidataQueryServiceR")
 library("purrr")
 
 query_template <- '
-SELECT 
-  (SAMPLE(?species) AS ?speciesUrl)
+SELECT
+  ?scientificName
   ?speciesLabel 
+  (SAMPLE(?species) AS ?speciesUrl)
   (SAMPLE(?image) AS ?imageUrl) 
   (SAMPLE(?commonNameEn) AS ?commonNameEn) 
   (SAMPLE(?commonNameDe) AS ?commonNameDe) 
   (SAMPLE(?commonNameFr) AS ?commonNameFr) 
-  (SAMPLE(?commonNameLb) AS ?commonNameLb) 
+  (SAMPLE(?commonNameLb) AS ?commonNameLb)
+  (SAMPLE(?englishLabel) as ?labelEn)
   (SAMPLE(?germanLabel) AS ?labelDe) 
   (SAMPLE(?frenchLabel) AS ?labelFr) 
-  (SAMPLE(?luxembourgishLabel) AS ?labelLb) 
-  (SAMPLE(?wikipediaLink) AS ?wikipediaUrl)
+  (SAMPLE(?luxembourgishLabel) AS ?labelLb)
+  (SAMPLE(?wikipediaLinkEn) AS ?wikipediaLinkEn)
+  (SAMPLE(?wikipediaLinkFr) AS ?wikipediaLinkFr)
+  (SAMPLE(?wikipediaLinkDe) AS ?wikipediaLinkDe)
+  (SAMPLE(?wikipediaLinkLb) AS ?wikipediaLinkLb)
 WHERE {
   VALUES ?scientificName {%s}  # Scientific names
 
@@ -60,16 +65,28 @@ WHERE {
     FILTER(LANG(?luxembourgishLabel) = "lb")  # Restrict to Luxembourgish labels
   }
 
-  # Retrieve the English Wikipedia link if it exists
+  # Retrieve the Wikipedia links if they exists
   OPTIONAL {
-    ?wikipediaLink schema:about ?species;
-                   schema:isPartOf <https://en.wikipedia.org/>.
+    ?wikipediaLinkEn schema:about ?species;
+                     schema:isPartOf <https://en.wikipedia.org/>.
+  }
+  OPTIONAL {
+    ?wikipediaLinkFr schema:about ?species;
+                     schema:isPartOf <https://fr.wikipedia.org/>.
+  }
+  OPTIONAL {
+    ?wikipediaLinkDe schema:about ?species;
+                     schema:isPartOf <https://de.wikipedia.org/>.
+  }
+  OPTIONAL {
+    ?wikipediaLinkLb schema:about ?species;
+                     schema:isPartOf <https://lb.wikipedia.org/>.
   }
 
   # Service to retrieve English labels
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
 }
-GROUP BY ?species ?speciesLabel'
+GROUP BY ?scientificName ?speciesLabel'
 
 download_taxon_info <- function(taxon_names, block_size) {
   if (missing(block_size)) {
@@ -77,22 +94,45 @@ download_taxon_info <- function(taxon_names, block_size) {
   }
 
   names_count <- length(taxon_names)
-  taxon_info = data.frame()
+  taxon_info <- data.frame()
 
   i <- 1
   while (i <= names_count) {
     if (i+block_size-1 < names_count) {
+      # a complete block
       taxon_names_block <- taxon_names[i:(i+block_size-1)]
     } else {
+      # at end of taxa, we only have an incomplete block left
       taxon_names_block <- taxon_names[i:names_count]
     }
   
+    # format names in one string: "name1" "name2" ...
     taxon_names_block_str <- paste(purrr::map(taxon_names_block,
                                               function(tn) sprintf('"%s"', tn)),
                                    collapse=" ")
+    # aaand interpolate into SPARQL query
     query <- sprintf(query_template, taxon_names_block_str)
     result <- query_wikidata(query)
-  
+
+    # Use label as common name if first is missing
+    for (i in 1:nrow(result)) {
+      if (is.na(result[i, "commonNameEn"]) && !is.na(result[i, "labelEn"])) {
+        result[i, "commonNameEn"] = result[i, "labelEn"]
+      }
+      if (is.na(result[i, "commonNameFr"]) && !is.na(result[i, "labelFr"])) {
+        result[i, "commonNameFr"] = result[i, "labelFr"]
+      }
+      if (is.na(result[i, "commonNameDe"]) && !is.na(result[i, "labelDe"])) {
+        result[i, "commonNameDe"] = result[i, "labelDe"]
+      }
+      if (is.na(result[i, "commonNameLb"]) && !is.na(result[i, "labelLb"])) {
+        result[i, "commonNameLb"] = result[i, "labelLb"]
+      }
+    }
+
+    ## result$mdata_taxon_name <- taxon_names_block
+
+    # append to taxon info
     taxon_info <- rbind(taxon_info, result)
     
     i <- i+block_size
@@ -105,7 +145,7 @@ download_taxon_info_from_observations <- function(observations, block_size, save
     save <- false
   }
     
-  taxa <- sort(unique(observations[,"preferred"]))
+  taxa <- sort(unique(as.data.frame(observations)$species))
   taxon_info <- download_taxon_info(taxa, block_size)
 
   if (save) {
@@ -124,5 +164,5 @@ load_taxon_info_from_file <- function(path) {
 }
 
 find_taxon_info <- function(taxon_info, taxon_name) {
-  taxon_info[grep(taxon_name, taxon_info$speciesLabel),]
+  taxon_info[grep(taxon_name, taxon_info$scientificName),]
 }

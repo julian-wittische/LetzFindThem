@@ -1,3 +1,5 @@
+library(sf)
+
 load_data <- function(path) {
     source("config.R")
     (files <- list.files(DATAPATH, full.names = TRUE, pattern="*.csv"))
@@ -7,12 +9,12 @@ load_data <- function(path) {
     mdata <- mdata[complete.cases(mdata$Long),]
 
     # Keep only strict minimum
-    reduced <- mdata[,c("Observation_Key","Lat", "Long", "preferred")]
+    mdata <- mdata[,c("Observation_Key","Lat", "Long", "preferred")]
 
-    reduced <- reduced[, c(1,3,2,4)]
-    colnames(reduced) <- c("name", "lng", "lat", "species")
+    mdata <- mdata[, c(1,3,2,4)]
+    colnames(mdata) <- c("name", "lng", "lat", "species")
 
-    all_points <- st_as_sf(reduced, coords = c("lng", "lat"), crs = 4326)
+    all_points <- st_as_sf(mdata, coords = c("lng", "lat"), crs = 4326)
     all_points <- st_transform(all_points, 2169)
     all_points
 }
