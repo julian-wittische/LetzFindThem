@@ -96,7 +96,7 @@ server <- function(input, output, session) {
         layerId = "innerCircle"
       )
     
-    center <- st_as_sf(data.frame(lng = lng, lat = lat),
+    center <- st_as_sf(data.frame(lng=lng, lat=lat),
                        coords = c("lng", "lat"), crs = 4326)
     center <- st_transform(center, 2169)
 
@@ -104,11 +104,11 @@ server <- function(input, output, session) {
 
     idx_outer <- lv_points_in_circle(tree, center_coords, OUTER_RADIUS)
     points_outer <- all_points[idx_outer,]
-    species_count_outer <- as.data.frame(table(points_outer$species))
+    species_count_outer <- as.data.frame(table(points_outer$preferred))
 
     idx_inner <- lv_points_in_circle(tree, center_coords, INNER_RADIUS)
     points_inner <- all_points[idx_inner,]
-    species_count_inner <- as.data.frame(table(points_inner$species))
+    species_count_inner <- as.data.frame(table(points_inner$preferred))
 
     species_annulus <- setdiff(species_count_outer$Var1, species_count_inner$Var1)
     
