@@ -1,3 +1,5 @@
+library(sf)
+
 load_data <- function(path) {
     files <- list.files(path, full.names = TRUE, pattern="*.csv")
 
