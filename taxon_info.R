@@ -171,14 +171,14 @@ download_taxon_info_from_observations <- function(observations, block_size, save
   }
 
   if (save) {
-    save(taxon_info, file="data/taxon_info.RData")
+    save(taxon_info, file=paste0(dirname(DATA_PATH),"/taxon_info.RData"))
   }
   taxon_info
 }
 
 load_taxon_info_from_file <- function(path) {
   if (missing(path)) {
-    path <- "data/taxon_info.RData"
+    path <- paste0(dirname(DATA_PATH),"/taxon_info.RData")
   }
     
   load(path)
