@@ -14,8 +14,16 @@ dt:before {
   content: "";
   display: block;
 }
-dt, dd {
-  display: inline;
+.card {
+  width: 250px;
+  margin-right: 20px;
+}
+img {
+  max-height: 140px;
+  max-width: 100%;
+  width: auto  ;
+  height: auto;
+  object-fit: contain;
 }
 '),
   div(
@@ -23,7 +31,7 @@ dt, dd {
     style = "height: 50vh;"
   ),
   div(
-    style = "padding: 20px;",
-    uiOutput("speciesInfo"),
+    style = "padding-top: 20px; display: flex; flex-wrap: wrap;",
+    uiOutput("speciesInfo")
   )
 )

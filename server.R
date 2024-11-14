@@ -112,6 +112,10 @@ taxon_card <- function(species_count) {
 
 # Define the server logic
 server <- function(input, output, session) {
+  output$speciesInfo <- renderUI({
+    h4("Click anywhere on the map to see what species you can probably find in the inner circle.")
+  })
+  
   observeEvent(input$map_click, {
     click <- input$map_click
     lat <- click$lat
@@ -162,14 +166,11 @@ server <- function(input, output, session) {
     maybetic("Render species")
     output$speciesInfo <- renderUI({
       if (nrow(species_count_annulus) == 0) {
-        return(h4("No species within the outer but not inner circle."))
+        h4("No species within the outer but not inner circle.")
       } else {
-        layout_column_wrap(
-          width="200px", fixed_width=TRUE,
-          !!!lapply(seq_len(nrow(species_count_annulus[1:TAXA_DISPLAY_MAX,])), function(i) {
-            taxon_card(species_count_annulus[i,])
-          })
-        )
+        lapply(seq_len(nrow(species_count_annulus[1:min(nrow(species_count_annulus),TAXA_DISPLAY_MAX),])), function(i) {
+          taxon_card(species_count_annulus[i,])
+        })
       }
     })
   })
