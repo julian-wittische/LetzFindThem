@@ -1,7 +1,12 @@
 DATA_PATH <- "data/inputs/"
 #DATA_PATH <- "data/observations.csv"
 
+# Size of the circles
 INNER_RADIUS <- 800  # m
 OUTER_RADIUS <- 2000  # m
 
+# Print debug info
 DEBUG <- FALSE
+
+# The amount of taxa to display at maximum. This influences performance a lot
+TAXA_DISPLAY_MAX <- 50

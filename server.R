@@ -52,6 +52,64 @@ maybetoc <- function() {
   }
 }
 
+taxon_card <- function(species_count) {
+  src <- "no-image.png"
+
+  taxon_name <- species_count$Var1
+  taxon_count <- species_count$Freq
+  ti <- find_taxon_info(taxon_info, taxon_name)[1,]
+  
+  if (nrow(ti) > 0 && !is.na(ti$imageUrl)) {
+    src <- thumb(ti$imageUrl)
+  }
+
+  if (!is.na(ti$wikipediaLinkEn)) {
+    tagEn <- tags$dd(tags$a(href=ti$wikipediaLinkEn,
+                            target="_blank", ti$commonNameEn))
+  } else {
+    tagEn <- tags$dd(ti$commonNameEn)
+  }
+
+  if (!is.na(ti$wikipediaLinkFr)) {
+    tagFr <- tags$dd(tags$a(href=ti$wikipediaLinkFr,
+                            target="_blank", ti$commonNameFr))
+  } else {
+    tagFr <- tags$dd(ti$commonNameFr)
+  }
+
+  if (!is.na(ti$wikipediaLinkDe)) {
+    tagDe <- tags$dd(tags$a(href=ti$wikipediaLinkDe,
+                            target="_blank", ti$commonNameDe))
+  } else {
+    tagDe <- tags$dd(ti$commonNameDe)
+  }
+
+  if (!is.na(ti$wikipediaLinkLb)) {
+    tagLb <- tags$dd(tags$a(href=ti$wikipediaLinkLb,
+                            target="_blank", ti$commonNameLb))
+  } else {
+    tagLb <- tags$dd(ti$commonNameLb)
+  }
+
+  card(
+    card_header(taxon_name),
+    card_body(
+      tags$img(src=src),
+      tags$dl(tags$dt("English: "), tagEn,
+              tags$dt("Français: "), tagFr,
+              tags$dt("Deutsch: "), tagDe,
+              tags$dt("Lëtzebuergesch: "), tagLb,
+              tags$dt("Count in donut"), tags$dd(taxon_count),
+              tags$dt("Higher taxonomy"),
+              tags$div(class="small",
+                       ti$class, ">",
+                       ti$order, ">",
+                       ti$family)
+              )
+    )
+  )
+}
+
 # Define the server logic
 server <- function(input, output, session) {
   observeEvent(input$map_click, {
@@ -107,66 +165,11 @@ server <- function(input, output, session) {
         return(h4("No species within the outer but not inner circle."))
       } else {
         layout_column_wrap(
-              width="200px", fixed_width=TRUE,
-              !!!lapply(seq_len(nrow(species_count_annulus)), function(i) {
-                  taxon_name <- species_count_annulus$Var1[i]
-                  taxon_count <- species_count_annulus$Freq[i]
-                  src <- "no-image.png"
-
-                  ti <- find_taxon_info(taxon_info, taxon_name)[1,]
-
-                  if (nrow(ti) > 0 && !is.na(ti$imageUrl)) {
-                      src <- thumb(ti$imageUrl)
-                  }
-
-                  if (!is.na(ti$wikipediaLinkEn)) {
-                      tagEn <- tags$dd(tags$a(href=ti$wikipediaLinkEn,
-                                              target="_blank", ti$commonNameEn))
-                  } else {
-                      tagEn <- tags$dd(ti$commonNameEn)
-                  }
-
-                  if (!is.na(ti$wikipediaLinkFr)) {
-                      tagFr <- tags$dd(tags$a(href=ti$wikipediaLinkFr,
-                                              target="_blank", ti$commonNameFr))
-                  } else {
-                      tagFr <- tags$dd(ti$commonNameFr)
-                  }
-
-                  if (!is.na(ti$wikipediaLinkDe)) {
-                      tagDe <- tags$dd(tags$a(href=ti$wikipediaLinkDe,
-                                              target="_blank", ti$commonNameDe))
-                  } else {
-                      tagDe <- tags$dd(ti$commonNameDe)
-                  }
-
-                  if (!is.na(ti$wikipediaLinkLb)) {
-                      tagLb <- tags$dd(tags$a(href=ti$wikipediaLinkLb,
-                                              target="_blank", ti$commonNameLb))
-                  } else {
-                      tagLb <- tags$dd(ti$commonNameLb)
-                  }
-
-                  card(
-                      card_header(taxon_name),
-                      card_body(
-                          tags$img(src=src),
-                          tags$dl(
-                                   tags$dt("English: "), tagEn,
-                                   tags$dt("Français: "), tagFr,
-                                   tags$dt("Deutsch: "), tagDe,
-                                   tags$dt("Lëtzebuergesch: "), tagLb,
-                                   tags$dt("Count in donut"), tags$dd(taxon_count),
-                                   tags$dt("Higher taxonomy"),
-                                   tags$div(class="small",
-                                                  ti$class, ">",
-                                                  ti$order, ">",
-                                                  ti$family)
-                               )
-                      )
-                  )
-              })
-          )
+          width="200px", fixed_width=TRUE,
+          !!!lapply(seq_len(nrow(species_count_annulus[1:TAXA_DISPLAY_MAX,])), function(i) {
+            taxon_card(species_count_annulus[i,])
+          })
+        )
       }
     })
   })
