@@ -77,6 +77,11 @@
       ],
       "Hash": "f27411eb6d9c3dada5edd444b8416675"
     },
+    "WikidataQueryServiceR": {
+      "Package": "WikidataQueryServiceR",
+      "Version": "1.0.0",
+      "Source": "Repository"
+    },
     "askpass": {
       "Package": "askpass",
       "Version": "1.2.0",
@@ -225,6 +230,11 @@
         "R"
       ],
       "Hash": "d91263322a58af798f6cf3b13fd56dde"
+    },
+    "data.table": {
+      "Package": "data.table",
+      "Version": "1.16.2",
+      "Source": "Repository"
     },
     "digest": {
       "Package": "digest",
@@ -745,6 +755,17 @@
         "yaml"
       ],
       "Hash": "062470668513dcda416927085ee9bdc7"
+    },
+    "rtree": {
+      "Package": "rtree",
+      "Version": "0.2.0",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "hunzikp",
+      "RemoteRepo": "rtree",
+      "RemoteRef": "master",
+      "RemoteSha": "a59cb1332323ad3f9c841276e7fd74a880c76e0b"
     },
     "s2": {
       "Package": "s2",
