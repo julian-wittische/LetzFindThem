@@ -186,5 +186,5 @@ load_taxon_info_from_file <- function(path) {
 }
 
 find_taxon_info <- function(taxon_info, taxon_name) {
-  taxon_info[grep(taxon_name, taxon_info$scientificName),]
+  taxon_info[grep(trimws(taxon_name), taxon_info$scientificName),]
 }
