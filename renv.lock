@@ -231,6 +231,11 @@
       ],
       "Hash": "d91263322a58af798f6cf3b13fd56dde"
     },
+    "data.table": {
+      "Package": "data.table",
+      "Version": "1.16.2",
+      "Source": "Repository"
+    },
     "digest": {
       "Package": "digest",
       "Version": "0.6.37",
