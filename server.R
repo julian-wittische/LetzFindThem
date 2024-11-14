@@ -145,6 +145,12 @@ server <- function(input, output, session) {
     maybetic("Find outer obs")
     idx_outer <- lv_points_in_circle(tree, center_coords, OUTER_RADIUS)
     points_outer <- all_points[idx_outer,]
+    if (nrow(points_outer) == 0) {
+      output$speciesInfo <- renderUI({
+        h4("No observations recorder here.")
+      })
+      return()
+    }
     species_count_outer <- as.data.frame(table(points_outer$preferred))
     maybetoc()
 
