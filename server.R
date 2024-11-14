@@ -11,7 +11,6 @@
 ###### Libraries
 source("config.R")
 source("taxon_info.R")
-source("mdata.R")
 
 library(shiny)
 library(bslib)
@@ -23,40 +22,6 @@ library(rtree)
 if (DEBUG) {
   library(tictoc)
 }
-
-all_points <- load_data(DATA_PATH)
-
-# Build search tree
-tree <- RTree(st_coordinates(all_points))
-
-# Get taxon_info from disk. These need to be pre-fetched first
-taxon_info <- load_taxon_info_from_file()
-
-# Define the UI
-ui <- page_fluid(
-    tags$style(type = "text/css", '
-#map {
-  height: 40vh; 
-  width: 100%;
-}
-
-dt:before {
-  content: "";
-  display: block;
-}
-dt, dd {
-  display: inline;
-}
-'),
-  div(
-    leafletOutput("map", width = "100%", height = "50vh"),
-    style = "height: 50vh;"
-  ),
-  div(
-    style = "padding: 20px;",
-    uiOutput("speciesInfo"),
-  )
-)
 
 lv_points_in_circle <- function(tree, center, radius) {
   unlist(withinDistance(tree, center, radius)[1])
@@ -216,7 +181,3 @@ server <- function(input, output, session) {
   })
   maybetoc()
 }
-
-options(shiny.autoreload=TRUE)
-# Run the app
-shinyApp(ui, server, options=list(port=8080))
