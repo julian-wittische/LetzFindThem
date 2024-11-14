@@ -2,6 +2,8 @@ source("config.R")
 source("taxon_info.R")
 source("mdata.R")
 
+library(rtree)
+
 # Load data from .csv files
 all_points <- load_data(DATA_PATH)
 
