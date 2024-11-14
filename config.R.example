@@ -4,3 +4,4 @@ DATA_PATH <- "data/inputs/"
 INNER_RADIUS <- 800  # m
 OUTER_RADIUS <- 2000  # m
 
+DEBUG <- FALSE

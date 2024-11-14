@@ -9,6 +9,10 @@
 ################################################################################
 
 ###### Libraries
+source("config.R")
+source("taxon_info.R")
+source("mdata.R")
+
 library(shiny)
 library(bslib)
 library(leaflet)
@@ -16,10 +20,9 @@ library(sf)
 library(dplyr)
 library(digest)
 library(rtree)
-
-source("config.R")
-source("taxon_info.R")
-source("mdata.R")
+if (DEBUG) {
+  library(tictoc)
+}
 
 all_points <- load_data(DATA_PATH)
 
@@ -72,11 +75,21 @@ thumb <- function(url) {
     src
 }
 
+maybetic <- function(msg) {
+  if (DEBUG) {
+    tic(msg)
+  }
+}
+
+maybetoc <- function() {
+  if (DEBUG) {
+    toc()
+  }
+}
+
 # Define the server logic
 server <- function(input, output, session) {
   observeEvent(input$map_click, {
-    pre <- Sys.time()
-
     click <- input$map_click
     lat <- click$lat
     lng <- click$lng
@@ -102,19 +115,28 @@ server <- function(input, output, session) {
 
     center_coords <- st_coordinates(center)
 
+    maybetic("Find outer obs")
     idx_outer <- lv_points_in_circle(tree, center_coords, OUTER_RADIUS)
     points_outer <- all_points[idx_outer,]
     species_count_outer <- as.data.frame(table(points_outer$preferred))
+    maybetoc()
 
+    maybetic("Find outer obs")
     idx_inner <- lv_points_in_circle(tree, center_coords, INNER_RADIUS)
     points_inner <- all_points[idx_inner,]
     species_count_inner <- as.data.frame(table(points_inner$preferred))
+    maybetoc()
 
+    maybetic("Calc diff")
     species_annulus <- setdiff(species_count_outer$Var1, species_count_inner$Var1)
-    
+    maybetoc()
+
+    maybetic("Histogram")
     species_count_annulus <- species_count_outer[species_count_outer$Var1 %in% species_annulus,]
     species_count_annulus <- species_count_annulus[order(species_count_annulus$Freq, decreasing = TRUE),]
+    maybetoc()
 
+    maybetic("Render species")
     output$speciesInfo <- renderUI({
       if (nrow(species_count_annulus) == 0) {
         return(h4("No species within the outer but not inner circle."))
@@ -183,13 +205,16 @@ server <- function(input, output, session) {
       }
     })
   })
+  maybetoc()
 
+  maybetic("Leaflet")
   output$map <- renderLeaflet({
       leaflet() %>%
           addTiles() %>%
           setView(lng = 6.13, lat = 49.61, zoom = 12) #%>%
           #addMarkers(data = all_points, popup = ~name)
   })
+  maybetoc()
 }
 
 options(shiny.autoreload=TRUE)
