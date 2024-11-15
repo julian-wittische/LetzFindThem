@@ -19,6 +19,7 @@ library(sf)
 library(dplyr)
 library(digest)
 library(rtree)
+library(leaflet.extras)
 if (DEBUG) {
   library(tictoc)
 }
@@ -134,8 +135,16 @@ server <- function(input, output, session) {
         fillColor = "blue",
         fillOpacity = 0.2,
         layerId = "innerCircle"
-      )
-    
+      ) %>%
+      addPolygons(
+        data=cont,
+        fill = TRUE,
+        weight = 2,
+        fillOpacity = 1,
+        fillColor = ~color,
+        color=alpha("white", 0)
+        )
+     
     center <- st_as_sf(data.frame(lng=lng, lat=lat),
                        coords = c("lng", "lat"), crs = 4326)
     center <- st_transform(center, 2169)
@@ -186,8 +195,8 @@ server <- function(input, output, session) {
   output$map <- renderLeaflet({
       leaflet() %>%
           addTiles() %>%
-          setView(lng = 6.13, lat = 49.61, zoom = 12) #%>%
-          #addMarkers(data = all_points, popup = ~name)
+          setView(lng = 6.13, lat = 49.61, zoom = 12)
+          
   })
   maybetoc()
 }

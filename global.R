@@ -1,6 +1,7 @@
 source("config.R")
 source("taxon_info.R")
 source("mdata.R")
+load("cont.RData")
 
 library(rtree)
 
