@@ -15,15 +15,13 @@ library(rgeoboundaries)
 library(spatstat)
 library(raster)
 
+source("config.R")
+source("mdata.R")
+
 lux_borders <- geoboundaries(country = "Luxembourg", adm_lvl = "adm0")
 lux_borders <- st_transform(lux_borders, crs = 2169)
 
-source("config.R")
-source("mdata.R")
-source("global.R")
-
-contour_data <- all_points
-
+# Extract geometry from observations and crop to Luxembourg
 contour_data <- load_data(DATA_PATH)
 contour_data <- contour_data["geometry"]
 contour_data <- st_crop(contour_data, lux_borders)
@@ -34,12 +32,10 @@ skde <- st_kde(contour_data[sample(1:nrow(contour_data), 500000),], gridsize= c(
 contours <- st_get_contour(skde, cont=c(85, 90, 96, 97, 98, 99, 99.999))
 contours <-  st_crop(contours, lux_borders)
 
-theme_set(ggthemes::theme_map())
-
-
-# Actual kde
-gs <- ggplot(skde, stoke=NA) #+ geom_sf(data=lux_borders) #+ geom_sf(data=all_points) no points
-
+if (DEBUG) {
+  theme_set(ggthemes::theme_map())
+  gs <- ggplot(skde, stoke=NA) #+ geom_sf(data=lux_borders) #+ geom_sf(data=all_points) no points
+}
 
 # Colors
 percentile_colors <- c(# Light purple, semi-transparent
@@ -79,11 +75,11 @@ cont$color <- rev(unname(percentile_colors <- c(# Light purple, semi-transparent
     "98%" = alpha(colocont, 1),
     "99%" = alpha(colocont, 0),        # Medium purple, more opaque
     "99.999%" = alpha(colocont, 0)    # Dark purple, mostly opaque - transparent because border effect
-  )))
+)))
 
 # To test colors
 gs + geom_sf(data=cont, aes(fill=label_percent(contlabel)), color=NA) + 
   scale_fill_manual(values=percentile_colors) +
   ggthemes::theme_map()
 
-save(cont, file="cont.RData")
+save(cont, file=paste0(DATA_PATH, "/coldspot_contours.RData"))

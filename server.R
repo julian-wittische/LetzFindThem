@@ -19,6 +19,7 @@ library(dplyr)
 library(digest)
 library(rtree)
 library(leaflet.extras)
+library(scales)
 if (DEBUG) {
   library(tictoc)
 }
@@ -116,14 +117,25 @@ server <- function(input, output, session) {
   output$speciesInfo <- renderUI({
     h4("Click anywhere on the map to see what species you can probably find in the inner circle.")
   })
-  
+
+  # Display coldspots
+  leafletProxy("map") %>%
+    addPolygons(
+      data=cont,
+      fill = TRUE,
+      weight = 2,
+      fillOpacity = 1,
+      fillColor = ~color,
+      color=alpha("white", 0)
+    )
+
   observeEvent(input$map_click, {
     click <- input$map_click
     lat <- click$lat
     lng <- click$lng
     
     leafletProxy("map") %>%
-      clearShapes() %>%
+      removeShape(c("outerCircle", "innerCircle")) %>%
       addCircles(
         lng = lng, lat = lat, radius = OUTER_RADIUS,
         color = "blue", fillColor = "blue", fillOpacity = 0,
@@ -135,16 +147,8 @@ server <- function(input, output, session) {
         fillColor = "blue",
         fillOpacity = 0.2,
         layerId = "innerCircle"
-      ) %>%
-      addPolygons(
-        data=cont,
-        fill = TRUE,
-        weight = 2,
-        fillOpacity = 1,
-        fillColor = ~color,
-        color=alpha("white", 0)
-        )
-     
+      )
+
     center <- st_as_sf(data.frame(lng=lng, lat=lat),
                        coords = c("lng", "lat"), crs = 4326)
     center <- st_transform(center, 2169)
