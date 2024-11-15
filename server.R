@@ -5,10 +5,9 @@
 # Request: Patrick Michaely
 # Start: Fall 2024
 # Data: MNHNL/Web
-# Script goal: utility functions to be used by app
+# Script goal: defines the way the server reacts to user queries
 ################################################################################
 
-###### Libraries
 source("config.R")
 source("taxon_info.R")
 
@@ -28,17 +27,18 @@ lv_points_in_circle <- function(tree, center, radius) {
   unlist(withinDistance(tree, center, radius)[1])
 }
 
+# Generate a thumbnail from an wikipedia image link
 thumb <- function(url) {
-    filename <- URLdecode(tail(strsplit(url, split="/")[[1]], n=1))
-    filename <- gsub(" ", "_", filename)
-    md5 <- digest(filename, algo="md5", serialize=FALSE)
-    src <- paste("https://upload.wikimedia.org/wikipedia/commons/thumb/",
-                 substr(md5, 1, 1), "/",
-                 substr(md5, 1, 2), "/",
-                 filename, "/",
-                 "200px-", filename,
-                 sep="")
-    src
+  filename <- URLdecode(tail(strsplit(url, split="/")[[1]], n=1))
+  filename <- gsub(" ", "_", filename)
+  md5 <- digest(filename, algo="md5", serialize=FALSE)
+  src <- paste("https://upload.wikimedia.org/wikipedia/commons/thumb/",
+               substr(md5, 1, 1), "/",
+               substr(md5, 1, 2), "/",
+               filename, "/",
+               "200px-", filename,
+               sep="")
+  src
 }
 
 maybetic <- function(msg) {
@@ -193,10 +193,11 @@ server <- function(input, output, session) {
 
   maybetic("Leaflet")
   output$map <- renderLeaflet({
-      leaflet() %>%
-          addTiles() %>%
-          setView(lng = 6.13, lat = 49.61, zoom = 12)
-          
+    leaflet() %>%
+      addTiles() %>%
+      setView(lng = 6.13, lat = 49.61, zoom = 12)
+      #%>%
+      #addMarkers(data = all_points, popup = ~name)
   })
   maybetoc()
 }

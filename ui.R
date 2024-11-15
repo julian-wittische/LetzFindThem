@@ -2,14 +2,12 @@ library(shiny)
 library(bslib)
 library(leaflet)
 
-# Define the UI
 ui <- page_fluid(
-    tags$style(type = "text/css", '
+  tags$style(type = "text/css", '
 #map {
   height: 40vh; 
   width: 100%;
 }
-
 dt:before {
   content: "";
   display: block;

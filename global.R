@@ -12,4 +12,4 @@ all_points <- load_data(DATA_PATH)
 tree <- RTree(st_coordinates(all_points))
 
 # Get taxon_info from disk. These need to be pre-fetched first
-taxon_info <- load_taxon_info_from_file()
+taxon_info <- load_taxon_info_from_file(DATA_PATH)

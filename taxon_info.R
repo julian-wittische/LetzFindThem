@@ -89,6 +89,14 @@ WHERE {
 }
 GROUP BY ?scientificName ?speciesLabel'
 
+maybe_replace <- function(result, j, lang) {
+  cn <- paste0("commonName", lang)
+  lb <- paste0("label", lang)
+  if (is.na(result[j, cn]) && !is.na(result[j, lb])) {
+    result[j, cn] <- result[j, lb]
+  }
+}
+
 download_taxon_info <- function(taxon_names, block_size) {
   if (missing(block_size)) {
     block_size <- 100
@@ -117,40 +125,31 @@ download_taxon_info <- function(taxon_names, block_size) {
 
     for (j in seq_len(nrow(result))) {
       # Use label as common name if first is missing
-      if (is.na(result[j, "commonNameEn"]) && !is.na(result[j, "labelEn"])) {
-        result[j, "commonNameEn"] <- result[j, "labelEn"]
-      }
-      if (is.na(result[j, "commonNameFr"]) && !is.na(result[j, "labelFr"])) {
-        result[j, "commonNameFr"] <- result[j, "labelFr"]
-      }
-      if (is.na(result[j, "commonNameDe"]) && !is.na(result[j, "labelDe"])) {
-        result[j, "commonNameDe"] <- result[j, "labelDe"]
-      }
-      if (is.na(result[j, "commonNameLb"]) && !is.na(result[j, "labelLb"])) {
-        result[j, "commonNameLb"] <- result[j, "labelLb"]
-      }
+      maybe_replace(result, j, "En")
+      maybe_replace(result, j, "Fr")
+      maybe_replace(result, j, "De")
+      maybe_replace(result, j, "Lb")
     }
-
-    ## result$mdata_taxon_name <- taxon_names_block
 
     # append to taxon info
     taxon_info <- rbind(taxon_info, result)
 
     i <- i+block_size
 
-    print(paste(i/names_count*100, "%"))
+    print(paste("Downloading taxon_info:", i/names_count*100, "%"))
   }
   taxon_info
 }
 
-download_taxon_info_from_observations <- function(observations, block_size, save) {
+download_taxon_info_from_observations <- function(observations, block_size, save, destination_directory) {
   if (missing(save)) {
     save <- false
   }
 
   observations <- as.data.frame(observations)
   obs_table <- as.data.table(observations)
-  ## setkey(obs_table, "preferred")
+
+  # Speed up serach query later on
   setindex(obs_table, "preferred")
 
   taxa <- sort(unique(observations$preferred))
@@ -158,7 +157,7 @@ download_taxon_info_from_observations <- function(observations, block_size, save
 
   # Supplement with higher taxon info from observation table
   for (i in seq_len(nrow(taxon_info))) {
-    print(paste(i/nrow(taxon_info)*100, "%"))
+    print(paste("Adding higher taxonomy:", i/nrow(taxon_info)*100, "%"))
     sn <- taxon_info[i, "scientificName"][[1]]
 
     obs <- obs_table[obs_table$preferred==sn,] # find corresponding observations
@@ -171,16 +170,15 @@ download_taxon_info_from_observations <- function(observations, block_size, save
   }
 
   if (save) {
-    save(taxon_info, file=paste0(dirname(DATA_PATH),"/taxon_info.RData"))
+    path <- paste0(destination_directory,"/taxon_info.RData")
+    print(paste("Saving result to", path))
+    save(taxon_info, file=path)
   }
   taxon_info
 }
 
-load_taxon_info_from_file <- function(path) {
-  if (missing(path)) {
-    path <- paste0(dirname(DATA_PATH),"/taxon_info.RData")
-  }
-    
+load_taxon_info_from_file <- function(source_directory) {
+  path <- paste0(source_directory, "/taxon_info.RData")
   load(path)
   taxon_info
 }
